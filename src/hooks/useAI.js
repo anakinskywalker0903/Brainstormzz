@@ -1,120 +1,90 @@
-import { useState, useCallback } from 'react';
+// src/hooks/useAI.js
+import { useCallback } from "react";
 
-/**
- * Custom React hook that integrates with Chrome's on-device Gemini Nano AI APIs.
- * Falls back to mock responses when APIs are unavailable.
- */
-const useAI = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [lastResponse, setLastResponse] = useState(null);
+const API_KEY =
+  process.env.REACT_APP_GEMINI_API_KEY ||
+  "AIzaSyD125zDLB3iZZ3fsgvdOGCFrCzFhEuUKaU";
 
-  // Utility function to detect API availability
-  const isChromeAIAvailable = () =>
-    typeof window !== 'undefined' && !!window.ai?.createTextSession;
+const ENDPOINT =
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
-  // --- 1️⃣ Expand Ideas ---
-  const expandIdeas = useCallback(async (prompt) => {
-    setIsLoading(true);
-    setError(null);
+export function useAI() {
+  const generateIdeas = useCallback(async (topic) => {
+    if (!topic) return [];
 
     try {
-      // ✅ Use Chrome's built-in on-device Prompt API if available
-      if (isChromeAIAvailable()) {
-        const session = await window.ai.createTextSession();
-        const result = await session.prompt(`Generate 7 creative brainstorming ideas about: ${prompt}`);
-        setLastResponse({ type: 'expand', data: [result] });
-        return [result];
+      const response = await fetch(`${ENDPOINT}?key=${API_KEY}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  text: `
+You are a backend JSON API.
+
+RULES:
+- Output ONLY valid JSON
+- No explanations
+- No markdown
+- No backticks
+
+Return EXACTLY this structure:
+
+{
+  "mainHeadings": [
+    {
+      "title": "Heading name",
+      "subIdeas": ["idea 1", "idea 2", "idea 3"]
+    }
+  ]
+}
+
+Topic: "${topic}"
+`,
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.5,
+            maxOutputTokens: 700,
+            responseMimeType: "application/json",
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.text();
+        console.error("Gemini API error:", err);
+        return [];
       }
 
-      // 🔄 Mock fallback
-      const ideas = [
-        'Core Concept',
-        'Implementation Strategy',
-        'Target Audience',
-        'Success Metrics',
-        'Risk Management',
-        'Resource Requirements',
-        'Timeline Planning'
-      ];
-      setLastResponse({ type: 'expand', data: ideas });
-      return ideas;
-    } catch (err) {
-      console.error('AI Error (expandIdeas):', err);
-      setError(err.message);
-      throw err;
-    } finally {
-      setIsLoading(false);
+      const data = await response.json();
+      console.log("GEMINI RAW RESPONSE:", data);
+
+      const part = data?.candidates?.[0]?.content?.parts?.[0];
+      if (!part) return [];
+
+      // Case 1: JSON object
+      if (part.json?.mainHeadings) {
+        return part.json.mainHeadings;
+      }
+
+      // Case 2: JSON as string
+      if (part.text) {
+        const parsed = JSON.parse(part.text);
+        return parsed.mainHeadings || [];
+      }
+
+      return [];
+    } catch (error) {
+      console.error("AI ERROR:", error);
+      return [];
     }
   }, []);
 
-  // --- 2️⃣ Refine Idea ---
-  const refineIdea = useCallback(async (text) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      if (isChromeAIAvailable()) {
-        const session = await window.ai.createTextSession();
-        const result = await session.prompt(`Refine this idea for clarity and creativity: ${text}`);
-        setLastResponse({ type: 'refine', data: result });
-        return result;
-      }
-
-      const refined = `${text} (refined for clarity and impact)`;
-      setLastResponse({ type: 'refine', data: refined });
-      return refined;
-    } catch (err) {
-      console.error('AI Error (refineIdea):', err);
-      setError(err.message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  // --- 3️⃣ Summarize Ideas ---
-  const summarizeIdeas = useCallback(async (ideas) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      if (isChromeAIAvailable()) {
-        const session = await window.ai.createTextSession();
-        const result = await session.prompt(
-          `Summarize these brainstorming ideas into a concise, actionable plan:\n${ideas.join('\n')}`
-        );
-        setLastResponse({ type: 'summarize', data: result });
-        return result;
-      }
-
-      const summary = `Summary: ${ideas.join(', ')}`;
-      setLastResponse({ type: 'summarize', data: summary });
-      return summary;
-    } catch (err) {
-      console.error('AI Error (summarizeIdeas):', err);
-      setError(err.message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  // --- Check Chrome AI availability ---
-  const checkChromeAI = useCallback(() => ({
-    available: isChromeAIAvailable(),
-    version: window?.ai?.version ?? 'Fallback',
-  }), []);
-
-  return {
-    isLoading,
-    error,
-    lastResponse,
-    expandIdeas,
-    refineIdea,
-    summarizeIdeas,
-    checkChromeAI
-  };
-};
-
-export default useAI;
+  return { generateIdeas };
+}
