@@ -1,9 +1,8 @@
 // src/hooks/useAI.js
 import { useCallback } from "react";
 
-const API_KEY =
-  process.env.REACT_APP_GEMINI_API_KEY ||
-  "AIzaSyD125zDLB3iZZ3fsgvdOGCFrCzFhEuUKaU";
+const API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
+
 
 const ENDPOINT =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
