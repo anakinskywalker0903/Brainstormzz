@@ -1,17 +1,27 @@
 import { useState, useCallback } from 'react';
 
-/**
- * Custom React hook that integrates with Chrome's on-device Gemini Nano AI APIs.
- * Falls back to mock responses when APIs are unavailable.
- */
+const API_BASE = "http://localhost:3001";
+
 const useAI = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [lastResponse, setLastResponse] = useState(null);
 
-  // Utility function to detect API availability
+  // Detect Chrome Gemini Nano
   const isChromeAIAvailable = () =>
     typeof window !== 'undefined' && !!window.ai?.createTextSession;
+
+  // 🔹 Helper: OpenAI backend call
+  const callBackend = async (endpoint, body) => {
+    const res = await fetch(`${API_BASE}/${endpoint}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) throw new Error("AI backend failed");
+    return res.json();
+  };
 
   // --- 1️⃣ Expand Ideas ---
   const expandIdeas = useCallback(async (prompt) => {
@@ -19,28 +29,26 @@ const useAI = () => {
     setError(null);
 
     try {
-      // ✅ Use Chrome's built-in on-device Prompt API if available
+      // ✅ Chrome Gemini Nano
       if (isChromeAIAvailable()) {
         const session = await window.ai.createTextSession();
-        const result = await session.prompt(`Generate 7 creative brainstorming ideas about: ${prompt}`);
-        setLastResponse({ type: 'expand', data: [result] });
-        return [result];
+        const result = await session.prompt(
+          `Generate 7 creative brainstorming ideas about: ${prompt}`
+        );
+
+        const ideas = result.split('\n').filter(Boolean);
+        setLastResponse({ type: 'expand', data: ideas });
+        return ideas;
       }
 
-      // 🔄 Mock fallback
-      const ideas = [
-        'Core Concept',
-        'Implementation Strategy',
-        'Target Audience',
-        'Success Metrics',
-        'Risk Management',
-        'Resource Requirements',
-        'Timeline Planning'
-      ];
+      // 🌐 OpenAI fallback
+      const data = await callBackend("expand", { prompt });
+      const ideas = data.result.split('\n').filter(Boolean);
+
       setLastResponse({ type: 'expand', data: ideas });
       return ideas;
+
     } catch (err) {
-      console.error('AI Error (expandIdeas):', err);
       setError(err.message);
       throw err;
     } finally {
@@ -56,16 +64,19 @@ const useAI = () => {
     try {
       if (isChromeAIAvailable()) {
         const session = await window.ai.createTextSession();
-        const result = await session.prompt(`Refine this idea for clarity and creativity: ${text}`);
+        const result = await session.prompt(
+          `Refine this idea for clarity and creativity: ${text}`
+        );
+
         setLastResponse({ type: 'refine', data: result });
         return result;
       }
 
-      const refined = `${text} (refined for clarity and impact)`;
-      setLastResponse({ type: 'refine', data: refined });
-      return refined;
+      const data = await callBackend("refine", { text });
+      setLastResponse({ type: 'refine', data: data.result });
+      return data.result;
+
     } catch (err) {
-      console.error('AI Error (refineIdea):', err);
       setError(err.message);
       throw err;
     } finally {
@@ -82,17 +93,18 @@ const useAI = () => {
       if (isChromeAIAvailable()) {
         const session = await window.ai.createTextSession();
         const result = await session.prompt(
-          `Summarize these brainstorming ideas into a concise, actionable plan:\n${ideas.join('\n')}`
+          `Summarize these brainstorming ideas into a concise plan:\n${ideas.join('\n')}`
         );
+
         setLastResponse({ type: 'summarize', data: result });
         return result;
       }
 
-      const summary = `Summary: ${ideas.join(', ')}`;
-      setLastResponse({ type: 'summarize', data: summary });
-      return summary;
+      const data = await callBackend("summarize", { ideas });
+      setLastResponse({ type: 'summarize', data: data.result });
+      return data.result;
+
     } catch (err) {
-      console.error('AI Error (summarizeIdeas):', err);
       setError(err.message);
       throw err;
     } finally {
@@ -100,10 +112,10 @@ const useAI = () => {
     }
   }, []);
 
-  // --- Check Chrome AI availability ---
+  // --- Capability Check ---
   const checkChromeAI = useCallback(() => ({
     available: isChromeAIAvailable(),
-    version: window?.ai?.version ?? 'Fallback',
+    mode: isChromeAIAvailable() ? "On-device Gemini Nano" : "OpenAI Cloud",
   }), []);
 
   return {
