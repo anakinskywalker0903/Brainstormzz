@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useTheme } from '../context/ThemeContext';
-import useAI from '../hooks/useAI';
+import { useTheme } from '../context/ThemeContext.js';
+import useAI from '../hooks/useAI.js';
 
 const Toolbar = ({ ideas, selectedIdeas, onIdeasChange, onSelectedIdeasChange }) => {
   const [inputValue, setInputValue] = useState('');

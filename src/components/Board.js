@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { useTheme } from '../context/ThemeContext';
-import IdeaNode from './IdeaNode';
+import { useTheme } from '../context/ThemeContext.js';
+import IdeaNode from './IdeaNode.js';
 
 const Board = ({ ideas, selectedIdeas, onIdeasChange, onSelectedIdeasChange }) => {
   const canvasRef = useRef(null);

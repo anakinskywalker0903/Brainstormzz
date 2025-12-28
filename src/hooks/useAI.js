@@ -24,37 +24,32 @@ const useAI = () => {
   };
 
   // --- 1️⃣ Expand Ideas ---
-  const expandIdeas = useCallback(async (prompt) => {
-    setIsLoading(true);
-    setError(null);
+  const expandIdeas = async (prompt) => {
+  setIsLoading(true);
+  setError(null);
 
-    try {
-      // ✅ Chrome Gemini Nano
-      if (isChromeAIAvailable()) {
-        const session = await window.ai.createTextSession();
-        const result = await session.prompt(
-          `Generate 7 creative brainstorming ideas about: ${prompt}`
-        );
+  try {
+    const res = await fetch("http://localhost:5000/api/brainstorm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt }),
+    });
 
-        const ideas = result.split('\n').filter(Boolean);
-        setLastResponse({ type: 'expand', data: ideas });
-        return ideas;
-      }
+    const data = await res.json();
 
-      // 🌐 OpenAI fallback
-      const data = await callBackend("expand", { prompt });
-      const ideas = data.result.split('\n').filter(Boolean);
+    // Convert AI text into idea list
+    return data.ideas
+      .split("\n")
+      .map(i => i.replace(/^\d+[\).\s]*/, "").trim())
+      .filter(Boolean);
+  } catch (err) {
+    setError("AI request failed");
+    throw err;
+  } finally {
+    setIsLoading(false);
+  }
+};
 
-      setLastResponse({ type: 'expand', data: ideas });
-      return ideas;
-
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
 
   // --- 2️⃣ Refine Idea ---
   const refineIdea = useCallback(async (text) => {

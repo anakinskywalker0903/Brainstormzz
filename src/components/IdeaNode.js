@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../context/ThemeContext.js';
 
 const IdeaNode = ({ idea, isSelected, onUpdate, onDelete }) => {
   const { isDark } = useTheme();
