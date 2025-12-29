@@ -21,42 +21,56 @@ const Toolbar = ({
     translateIdea,
   } = useAI();
 
-  /* =======================
-     EXPAND IDEAS
-     ======================= */
-  const handleExpandIdeas = async () => {
-    if (!inputValue.trim()) return alert("Enter a prompt");
+/* =======================
+   EXPAND IDEAS
+   ======================= */
+const handleExpandIdeas = async () => {
+  if (!inputValue.trim()) {
+    alert("Enter a prompt");
+    return;
+  }
 
-    const expanded = await expandIdeas(inputValue);
-    if (!Array.isArray(expanded)) return;
+  let expanded = await expandIdeas(inputValue);
 
-    const padding = 40;
-    const nodeWidth = 180;
-    const gapX = 40;
-    const gapY = 90;
-    const boardWidth = 700;
+  // 🛡️ SAFETY: handle string OR array
+  if (typeof expanded === "string") {
+    expanded = expanded
+      .split("\n")
+      .map(line => line.replace(/^\d+[\).\s]+/, "").trim())
+      .filter(Boolean);
+  }
 
-    const maxCols = Math.max(
-      1,
-      Math.floor((boardWidth - padding * 2) / (nodeWidth + gapX))
-    );
+  if (!Array.isArray(expanded) || expanded.length === 0) {
+    alert("AI failed to generate ideas");
+    return;
+  }
 
-    const baseId = Date.now();
+  const padding = 40;
+  const nodeWidth = 180;
+  const gapX = 40;
+  const gapY = 90;
+  const boardWidth = 700;
 
-    const newIdeas = expanded.map((text, i) => ({
-      id: baseId + i,
-      text,
-      x: padding + (i % maxCols) * (nodeWidth + gapX),
-      y: padding + Math.floor(i / maxCols) * gapY,
-      connections: [], // 🚫 NO AUTO CONNECTIONS
-    }));
+  const maxCols = Math.max(
+    1,
+    Math.floor((boardWidth - padding * 2) / (nodeWidth + gapX))
+  );
 
-    onIdeasChange(newIdeas);
-    onSelectedIdeasChange([]);
-    setInputValue("");
-    setSummary("");
-  };
+  const baseId = Date.now();
 
+  const newIdeas = expanded.map((text, i) => ({
+    id: baseId + i,
+    text,
+    x: padding + (i % maxCols) * (nodeWidth + gapX),
+    y: padding + Math.floor(i / maxCols) * gapY,
+    connections: [], // 🔗 no auto links
+  }));
+
+  onIdeasChange(newIdeas);
+  onSelectedIdeasChange([]);
+  setInputValue("");
+  setSummary("");
+};
   /* =======================
      REFINE IDEAS
      ======================= */
