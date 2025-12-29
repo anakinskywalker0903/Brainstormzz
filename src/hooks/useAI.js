@@ -77,11 +77,15 @@ Topic: ${prompt}
       return [];
     }
 
-    const ideas = data.result
-      .split("\n")
-      .map(l => l.replace(/^\d+[\).\s]*/, "").trim())
-      .filter(Boolean)
-      .slice(0, 7);
+    if (!data?.result || typeof data.result !== "string") {
+  throw new Error("Invalid AI response");
+}
+
+const ideas = data.result
+  .split("\n")
+  .map(l => l.replace(/^\d+[\).\s]*/, "").trim())
+  .filter(Boolean)
+  .slice(0, 7);
 
     setLastResponse({ type: "expand", data: ideas });
     return ideas;
