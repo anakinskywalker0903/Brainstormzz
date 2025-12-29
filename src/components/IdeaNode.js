@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { useTheme } from "../context/ThemeContext.js";
 
 const NODE_WIDTH = 180;
-const NODE_HEIGHT = 60;
+const NODE_HEIGHT = 90;
 const DRAG_THRESHOLD = 5;
 
 const IdeaNode = ({
@@ -130,17 +130,25 @@ const IdeaNode = ({
             autoFocus
             onChange={(e) => setText(e.target.value)}
             onBlur={handleBlur}
-            className="w-full bg-transparent outline-none text-sm font-semibold"
+            className="w-full bg-transparent outline-none text-base font-semibold"
+
             style={{ color: isDark ? "#ff4d4d" : "#1e3a8a" }}
           />
         ) : (
           <div
-            onDoubleClick={() => setIsEditing(true)}
-            className="text-sm font-semibold select-none"
-            style={{ color: isDark ? "#ff4d4d" : "#1e3a8a" }}
-          >
-            {text}
-          </div>
+  onDoubleClick={() => setIsEditing(true)}
+  className="text-base font-semibold select-none"
+
+  style={{
+    color: isDark ? "#ff4d4d" : "#1e3a8a",
+    maxHeight: "100%",
+    overflowY: "auto",
+    wordBreak: "break-word",
+  }}
+>
+  {text}
+</div>
+
         )}
 
         <button
