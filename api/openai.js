@@ -12,8 +12,10 @@ export default async function handler(req, res) {
   try {
     const { prompt, mode, targetLanguage } = req.body;
 
-    if (!prompt) {
-      return res.status(400).json({ error: "Prompt required" });
+    if (!prompt && mode !== "expand") {
+      return res.status(400).json({
+        error: "Prompt required for summarize/translate",
+      });
     }
 
     let finalPrompt = prompt;
@@ -26,7 +28,7 @@ Each idea max 6–8 words.`;
     }
 
     if (mode === "summarize") {
-      finalPrompt = `Summarize the following ideas into a short, clear paragraph:
+      finalPrompt = `Summarize the following brainstorming ideas into a short paragraph:
 
 ${prompt}`;
     }
