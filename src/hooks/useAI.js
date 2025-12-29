@@ -1,57 +1,93 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback } from "react";
 
-const API_BASE = "http://localhost:3001";
+const API_URL = "http://localhost:5000/api/brainstorm";
 
 const useAI = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [lastResponse, setLastResponse] = useState(null);
 
-  // Detect Chrome Gemini Nano
+  // =========================
+  // Chrome Gemini Nano check
+  // =========================
   const isChromeAIAvailable = () =>
-    typeof window !== 'undefined' && !!window.ai?.createTextSession;
+    typeof window !== "undefined" && !!window.ai?.createTextSession;
 
-  // 🔹 Helper: OpenAI backend call
-  const callBackend = async (endpoint, body) => {
-    const res = await fetch(`${API_BASE}/${endpoint}`, {
+  // =========================
+  // Unified backend call
+  // =========================
+  const callBackend = async (payload) => {
+    const res = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify(payload),
     });
 
-    if (!res.ok) throw new Error("AI backend failed");
+    if (!res.ok) {
+      throw new Error("AI backend failed");
+    }
+
     return res.json();
   };
 
-  // --- 1️⃣ Expand Ideas ---
-  const expandIdeas = async (prompt) => {
-  setIsLoading(true);
-  setError(null);
+  // =========================
+  // 1️⃣ EXPAND IDEAS
+  // =========================
+  const expandIdeas = useCallback(async (prompt) => {
+    setIsLoading(true);
+    setError(null);
 
-  try {
-    const res = await fetch("http://localhost:5000/api/brainstorm", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt }),
-    });
+    try {
+      // 🔹 Gemini Nano (on-device)
+      if (isChromeAIAvailable()) {
+        const session = await window.ai.createTextSession();
+        const result = await session.prompt(`
+Generate exactly 7 brainstorming ideas.
+Rules:
+- One short phrase per idea
+- Max 8 words
+- No markdown, no emojis
+- Numbered list only
 
-    const data = await res.json();
+Topic: ${prompt}
+        `);
 
-    // Convert AI text into idea list
-    return data.ideas
-      .split("\n")
-      .map(i => i.replace(/^\d+[\).\s]*/, "").trim())
-      .filter(Boolean);
-  } catch (err) {
-    setError("AI request failed");
-    throw err;
-  } finally {
-    setIsLoading(false);
-  }
-};
+        const ideas = result
+          .split("\n")
+          .map(l => l.replace(/^\d+[\).\s]*/, "").trim())
+          .filter(Boolean)
+          .slice(0, 7);
 
+        setLastResponse({ type: "expand", data: ideas });
+        return ideas;
+      }
 
-  // --- 2️⃣ Refine Idea ---
+      // 🔹 Backend fallback
+      const data = await callBackend({
+        mode: "expand",
+        prompt,
+      });
+
+      const ideas = data.result
+        .split("\n")
+        .map(l => l.replace(/^\d+[\).\s]*/, "").trim())
+        .filter(Boolean)
+        .slice(0, 7);
+
+      setLastResponse({ type: "expand", data: ideas });
+      return ideas;
+
+    } catch (err) {
+      setError("Failed to expand ideas");
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // =========================
+  // 2️⃣ REFINE IDEA
+  // =========================
   const refineIdea = useCallback(async (text) => {
     setIsLoading(true);
     setError(null);
@@ -60,27 +96,74 @@ const useAI = () => {
       if (isChromeAIAvailable()) {
         const session = await window.ai.createTextSession();
         const result = await session.prompt(
-          `Refine this idea for clarity and creativity: ${text}`
+          `Refine this idea into one concise sentence:\n${text}`
         );
 
-        setLastResponse({ type: 'refine', data: result });
+        setLastResponse({ type: "refine", data: result });
         return result;
       }
 
-      const data = await callBackend("refine", { text });
-      setLastResponse({ type: 'refine', data: data.result });
+      const data = await callBackend({
+        mode: "refine",
+        text,
+      });
+
+      setLastResponse({ type: "refine", data: data.result });
       return data.result;
 
     } catch (err) {
-      setError(err.message);
+      setError("Failed to refine idea");
       throw err;
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // --- 3️⃣ Summarize Ideas ---
+  // =========================
+  // 3️⃣ SUMMARIZE IDEAS
+  // =========================
   const summarizeIdeas = useCallback(async (ideas) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const cleanIdeas = ideas
+        .map(i => typeof i === "string" ? i : i.text)
+        .filter(Boolean)
+        .slice(0, 10);
+
+      const joined = cleanIdeas.join("\n");
+
+      if (isChromeAIAvailable()) {
+        const session = await window.ai.createTextSession();
+        const result = await session.prompt(
+          `Summarize these ideas into a short actionable plan:\n${joined}`
+        );
+
+        setLastResponse({ type: "summarize", data: result });
+        return result;
+      }
+
+      const data = await callBackend({
+        mode: "summarize",
+        ideas: joined,
+      });
+
+      setLastResponse({ type: "summarize", data: data.result });
+      return data.result;
+
+    } catch (err) {
+      setError("Failed to summarize ideas");
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // =========================
+  // 4️⃣ TRANSLATE IDEA
+  // =========================
+  const translateIdea = useCallback(async (text, language) => {
     setIsLoading(true);
     setError(null);
 
@@ -88,30 +171,29 @@ const useAI = () => {
       if (isChromeAIAvailable()) {
         const session = await window.ai.createTextSession();
         const result = await session.prompt(
-          `Summarize these brainstorming ideas into a concise plan:\n${ideas.join('\n')}`
+          `Translate this idea to ${language}:\n${text}`
         );
 
-        setLastResponse({ type: 'summarize', data: result });
+        setLastResponse({ type: "translate", data: result });
         return result;
       }
 
-      const data = await callBackend("summarize", { ideas });
-      setLastResponse({ type: 'summarize', data: data.result });
+      const data = await callBackend({
+        mode: "translate",
+        text,
+        language,
+      });
+
+      setLastResponse({ type: "translate", data: data.result });
       return data.result;
 
     } catch (err) {
-      setError(err.message);
+      setError("Failed to translate idea");
       throw err;
     } finally {
       setIsLoading(false);
     }
   }, []);
-
-  // --- Capability Check ---
-  const checkChromeAI = useCallback(() => ({
-    available: isChromeAIAvailable(),
-    mode: isChromeAIAvailable() ? "On-device Gemini Nano" : "OpenAI Cloud",
-  }), []);
 
   return {
     isLoading,
@@ -120,8 +202,9 @@ const useAI = () => {
     expandIdeas,
     refineIdea,
     summarizeIdeas,
-    checkChromeAI
+    translateIdea,
   };
 };
 
 export default useAI;
+
