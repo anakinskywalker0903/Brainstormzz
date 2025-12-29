@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 
-const API_URL = "http://localhost:5000/api/brainstorm";
+const API_URL = "/api/openai";
 
 const useAI = () => {
   const [isLoading, setIsLoading] = useState(false);
