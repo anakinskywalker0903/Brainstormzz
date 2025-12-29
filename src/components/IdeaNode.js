@@ -3,9 +3,15 @@ import { useTheme } from "../context/ThemeContext.js";
 
 const NODE_WIDTH = 180;
 const NODE_HEIGHT = 60;
-const DRAG_THRESHOLD = 5; // px
+const DRAG_THRESHOLD = 5;
 
-const IdeaNode = ({ idea, isSelected, onUpdate, onDelete, onSelect }) => {
+const IdeaNode = ({
+  idea,
+  isSelected,
+  onUpdate,
+  onDelete,
+  onSelect = () => {}, // ✅ SAFE DEFAULT
+}) => {
   const { isDark } = useTheme();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -46,11 +52,22 @@ const IdeaNode = ({ idea, isSelected, onUpdate, onDelete, onSelect }) => {
 
     if (!isDragging.current) return;
 
-    onUpdate({
-      ...idea,
-      x: e.clientX - dragOffset.current.x,
-      y: e.clientY - dragOffset.current.y,
-    });
+    const board = document.querySelector("[data-board]");
+    if (!board) return;
+
+    const maxX = board.clientWidth - NODE_WIDTH;
+    const maxY = board.clientHeight - NODE_HEIGHT;
+
+    const newX = Math.min(
+      Math.max(0, e.clientX - dragOffset.current.x),
+      maxX
+    );
+    const newY = Math.min(
+      Math.max(0, e.clientY - dragOffset.current.y),
+      maxY
+    );
+
+    onUpdate({ ...idea, x: newX, y: newY });
   };
 
   /* =========================
@@ -84,7 +101,7 @@ const IdeaNode = ({ idea, isSelected, onUpdate, onDelete, onSelect }) => {
         top: idea.y,
         width: NODE_WIDTH,
         height: NODE_HEIGHT,
-        cursor: "grab",
+        cursor: isDragging.current ? "grabbing" : "grab",
         zIndex: 10,
       }}
       onMouseDown={handleMouseDown}

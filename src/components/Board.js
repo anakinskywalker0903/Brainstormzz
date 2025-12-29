@@ -56,7 +56,7 @@ const Board = ({
   }, [ideas, isDark]);
 
   /* =========================
-     SELECTION BOX START
+     SELECTION START
      ========================= */
   const handleMouseDown = (e) => {
     if (e.target !== boardRef.current) return;
@@ -95,12 +95,19 @@ const Board = ({
     if (!isSelecting || !selectionRect) return;
 
     const selected = ideas
-      .filter((idea) =>
-        idea.x >= selectionRect.x &&
-        idea.y >= selectionRect.y &&
-        idea.x + NODE_WIDTH <= selectionRect.x + selectionRect.w &&
-        idea.y + NODE_HEIGHT <= selectionRect.y + selectionRect.h
-      )
+      .filter((idea) => {
+        const ix1 = idea.x;
+        const iy1 = idea.y;
+        const ix2 = idea.x + NODE_WIDTH;
+        const iy2 = idea.y + NODE_HEIGHT;
+
+        const sx1 = selectionRect.x;
+        const sy1 = selectionRect.y;
+        const sx2 = selectionRect.x + selectionRect.w;
+        const sy2 = selectionRect.y + selectionRect.h;
+
+        return ix1 < sx2 && ix2 > sx1 && iy1 < sy2 && iy2 > sy1;
+      })
       .map((i) => i.id);
 
     onSelectedIdeasChange(selected);
@@ -151,6 +158,7 @@ const Board = ({
     <div className="relative w-full">
       <div
         ref={boardRef}
+        data-board
         className="relative rounded-lg overflow-hidden"
         style={{
           height: "70vh",
