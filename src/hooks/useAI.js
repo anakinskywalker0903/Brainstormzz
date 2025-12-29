@@ -31,18 +31,21 @@ const useAI = () => {
   };
 
   // =========================
-  // 1️⃣ EXPAND IDEAS
-  // =========================
-  const expandIdeas = useCallback(async (prompt) => {
-    setIsLoading(true);
-    setError(null);
+// 1️⃣ EXPAND IDEAS
+// =========================
 
-    try {
-      // 🔹 Gemini Nano (on-device)
-      if (isChromeAIAvailable()) {
-        const session = await window.ai.createTextSession();
-        const result = await session.prompt(`
+const expandIdeas = useCallback(async (prompt) => {
+  setIsLoading(true);
+  setError(null);
+
+  try {
+    // 🔹 Gemini Nano (ONLY local Chrome)
+    if (typeof window !== "undefined" && isChromeAIAvailable()) {
+      const session = await window.ai.createTextSession();
+
+      const result = await session.prompt(`
 Generate exactly 7 brainstorming ideas.
+
 Rules:
 - One short phrase per idea
 - Max 8 words
@@ -50,25 +53,9 @@ Rules:
 - Numbered list only
 
 Topic: ${prompt}
-        `);
+      `);
 
-        const ideas = result
-          .split("\n")
-          .map(l => l.replace(/^\d+[\).\s]*/, "").trim())
-          .filter(Boolean)
-          .slice(0, 7);
-
-        setLastResponse({ type: "expand", data: ideas });
-        return ideas;
-      }
-
-      // 🔹 Backend fallback
-      const data = await callBackend({
-        mode: "expand",
-        prompt,
-      });
-
-      const ideas = data.result
+      const ideas = result
         .split("\n")
         .map(l => l.replace(/^\d+[\).\s]*/, "").trim())
         .filter(Boolean)
@@ -76,14 +63,37 @@ Topic: ${prompt}
 
       setLastResponse({ type: "expand", data: ideas });
       return ideas;
-
-    } catch (err) {
-      setError("Failed to expand ideas");
-      throw err;
-    } finally {
-      setIsLoading(false);
     }
-  }, []);
+
+    // 🔹 Backend fallback (Vercel-safe)
+    const data = await callBackend({
+      mode: "expand",
+      prompt,
+    });
+
+    // 🛑 CRITICAL SAFETY CHECK
+    if (!data || !data.result || typeof data.result !== "string") {
+      console.error("Invalid backend response:", data);
+      return [];
+    }
+
+    const ideas = data.result
+      .split("\n")
+      .map(l => l.replace(/^\d+[\).\s]*/, "").trim())
+      .filter(Boolean)
+      .slice(0, 7);
+
+    setLastResponse({ type: "expand", data: ideas });
+    return ideas;
+
+  } catch (err) {
+    console.error(err);
+    setError("Failed to expand ideas");
+    return [];
+  } finally {
+    setIsLoading(false);
+  }
+}, []);
 
   // =========================
   // 2️⃣ REFINE IDEA
