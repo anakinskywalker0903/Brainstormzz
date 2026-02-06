@@ -21,9 +21,9 @@ const Board = ({ ideas, selectedIdeas, onIdeasChange, onSelectedIdeasChange }) =
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Validate and fix any ideas that are outside boundaries
-    const boardWidth = canvas.offsetWidth;
-    const boardHeight = canvas.offsetHeight;
+    // Validate: Use VERY large boundaries to prevent annoying snapping
+    const boardWidth = Math.max(canvas.offsetWidth, 3000);
+    const boardHeight = Math.max(canvas.offsetHeight, 3000);
     const ideaWidth = 180;
     const ideaHeight = 50;
     const margin = 0; // ZERO tolerance
@@ -94,10 +94,11 @@ const Board = ({ ideas, selectedIdeas, onIdeasChange, onSelectedIdeasChange }) =
 
       const newIdea = {
         id: Date.now(),
-        text: 'New idea',
+        text: '', // Empty text so placeholder or typing shows clearly
         x: constrainedX,
         y: constrainedY,
-        connections: []
+        connections: [],
+        autoEdit: true, // Trigger write mode immediately
       };
       onIdeasChange([...ideas, newIdea]);
     }
@@ -144,7 +145,6 @@ const Board = ({ ideas, selectedIdeas, onIdeasChange, onSelectedIdeasChange }) =
           overflow: 'hidden'
         }}
         onClick={handleCanvasClick}
-        onDoubleClick={handleCanvasDoubleClick}
         onDoubleClick={handleCanvasDoubleClick}
       >
         {/* Canvas for connections */}

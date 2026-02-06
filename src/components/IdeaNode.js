@@ -3,7 +3,8 @@ import { useTheme } from '../context/ThemeContext';
 
 const IdeaNode = ({ idea, isSelected, onUpdate, onDelete }) => {
   const { isDark } = useTheme();
-  const [isEditing, setIsEditing] = useState(false);
+  // Auto-enter edit mode if specifically requested (for new ideas)
+  const [isEditing, setIsEditing] = useState(idea.autoEdit || false);
   const [text, setText] = useState(idea?.text || '');
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
