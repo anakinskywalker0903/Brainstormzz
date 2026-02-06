@@ -7,7 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAI } from '../hooks/useAI';
 
 const Toolbar = ({ ideas, selectedIdeas, onIdeasChange, onSelectedIdeasChange }) => {
-  const { generateIdeas, loading } = useAI();
+  const { generateIdeas, summarizeIdeas, refineIdeas, loading } = useAI();
   const [inputValue, setInputValue] = useState('');
   const [summary, setSummary] = useState('');
   const { isDark } = useTheme();
@@ -30,11 +30,18 @@ const Toolbar = ({ ideas, selectedIdeas, onIdeasChange, onSelectedIdeasChange })
 
       console.log('Success! Generated headings:', mainHeadings);
 
+      // Layout logic: Spread ideas more evenly
+      const columns = 3;
+      const xSpacing = 300;
+      const ySpacing = 200;
+      const startX = 100;
+      const startY = 100;
+
       const newIdeas = mainHeadings.map((heading, index) => ({
         id: Date.now() + index,
         text: heading.title || 'Idea ' + (index + 1),
-        x: 150 + (index % 4) * 220,
-        y: 120 + Math.floor(index / 4) * 180,
+        x: startX + (index % columns) * xSpacing,
+        y: startY + Math.floor(index / columns) * ySpacing,
         connections: [],
         subIdeas: Array.isArray(heading.subIdeas) ? heading.subIdeas : [],
       }));
@@ -55,10 +62,37 @@ const Toolbar = ({ ideas, selectedIdeas, onIdeasChange, onSelectedIdeasChange })
     setInputValue('');
   };
 
-  // Other buttons as placeholders
-  const handleRefine = () => alert('Refine coming soon!');
-  const handleSummarize = () => alert('Summarize coming soon!');
-  const handleTranslate = () => alert('Translate coming soon!');
+  const handleRefine = async () => {
+    const targets = selectedIdeas.length > 0
+      ? ideas.filter(i => selectedIdeas.includes(i.id))
+      : ideas;
+
+    if (targets.length === 0) return;
+
+    try {
+      const refinedData = await refineIdeas(targets);
+
+      // Update ideas with refined text
+      const newIdeas = ideas.map(idea => {
+        const refined = refinedData.find(r => r.id === idea.id);
+        return refined ? { ...idea, text: refined.text } : idea;
+      });
+
+      onIdeasChange(newIdeas);
+    } catch (err) {
+      alert('Refine failed: ' + err.message);
+    }
+  };
+
+  const handleSummarize = async () => {
+    if (ideas.length === 0) return;
+    try {
+      const result = await summarizeIdeas(ideas);
+      setSummary(result);
+    } catch (err) {
+      alert('Summarize failed: ' + err.message);
+    }
+  };
 
   return (
     <div
@@ -102,14 +136,14 @@ const Toolbar = ({ ideas, selectedIdeas, onIdeasChange, onSelectedIdeasChange })
 
           <button
             onClick={handleRefine}
-            disabled={loading || selectedIdeas.length === 0}
+            disabled={loading || ideas.length === 0}
             className="px-4 py-2 text-white rounded-lg hover:opacity-90 focus:ring-2 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               backgroundColor: isDark ? '#7c3aed' : '#ec4899',
               fontSize: isDark ? '15px' : '14px'
             }}
           >
-            ✨ Refine
+            ✨ Refine {selectedIdeas.length > 0 ? '(Selected)' : '(All)'}
           </button>
 
           <button
@@ -122,18 +156,6 @@ const Toolbar = ({ ideas, selectedIdeas, onIdeasChange, onSelectedIdeasChange })
             }}
           >
             📝 Summarize
-          </button>
-
-          <button
-            onClick={handleTranslate}
-            disabled={loading || ideas.length === 0}
-            className="px-4 py-2 text-white rounded-lg hover:opacity-90 focus:ring-2 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              backgroundColor: isDark ? '#d97706' : '#f97316',
-              fontSize: isDark ? '15px' : '14px'
-            }}
-          >
-            🌍 Translate
           </button>
 
           <button
@@ -162,7 +184,7 @@ const Toolbar = ({ ideas, selectedIdeas, onIdeasChange, onSelectedIdeasChange })
         </div>
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: loading ? '#ffcc00' : '#10b981' }}></div>
-          <span>{loading ? 'Generating...' : 'AI Ready'}</span>
+          <span>{loading ? 'Processing...' : 'AI Ready'}</span>
         </div>
       </div>
     </div>
