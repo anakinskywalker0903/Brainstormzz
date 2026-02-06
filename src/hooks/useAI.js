@@ -49,14 +49,15 @@ export function useAI() {
       const messages = [
         {
           role: "system",
-          content: `You are a creative strategist. Output valid JSON only. 
-          Return a format: { "ideas": [ { "title": "Idea Title", "description": "Short explanation" } ] }`
+          content: `You are a visionary creative strategist. Output valid JSON only. 
+          Return a format: { "ideas": [ { "title": "Stunning Concept", "description": "Compelling 1-line detail" } ] }`
         },
         {
           role: "user",
           content: `Topic: ${topic}. 
-          Generate exactly 6 distinct, high-impact creative ideas. 
-          Return them as a flat list.`
+          Generate EXACTLY 6 distinct, world-class, innovative ideas. 
+          Each title must be punchy and professional.
+          Return a flat list ideas array.`
         }
       ];
 

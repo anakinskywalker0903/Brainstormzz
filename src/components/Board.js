@@ -176,6 +176,13 @@ const Board = ({ ideas, selectedIdeas, onIdeasChange, onSelectedIdeasChange }) =
             key={idea.id}
             idea={idea}
             isSelected={selectedIdeas.includes(idea.id)}
+            onToggleSelect={(e) => {
+              // Safe selection toggle that stops propagation
+              const newSelected = selectedIdeas.includes(idea.id)
+                ? selectedIdeas.filter(id => id !== idea.id)
+                : [...selectedIdeas, idea.id];
+              onSelectedIdeasChange(newSelected);
+            }}
             onUpdate={(updatedIdea) => {
               onIdeasChange(ideas.map(i =>
                 i.id === idea.id ? updatedIdea : i

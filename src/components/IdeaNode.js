@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
 
-const IdeaNode = ({ idea, isSelected, onUpdate, onDelete }) => {
+const IdeaNode = ({ idea, isSelected, onUpdate, onDelete, onToggleSelect }) => {
   const { isDark } = useTheme();
   // Auto-enter edit mode if specifically requested (for new ideas)
   const [isEditing, setIsEditing] = useState(idea.autoEdit || false);
@@ -21,7 +21,14 @@ const IdeaNode = ({ idea, isSelected, onUpdate, onDelete }) => {
   };
 
   const handleMouseDown = (e) => {
+    e.stopPropagation(); // Stop click from reaching board
     if (isEditing) return;
+
+    // Select idea if not already selected
+    if (!isSelected) {
+      // Logic for multi-select could go here (e.g. check for shift key)
+    }
+
     setIsDragging(true);
     setDragStart({
       x: e.clientX - idea.x,
@@ -75,6 +82,14 @@ const IdeaNode = ({ idea, isSelected, onUpdate, onDelete }) => {
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
+      onClick={(e) => {
+        e.stopPropagation();
+        // Toggle selection
+        onUpdate({
+          ...idea,
+          _toggleSelection: true // Signal parent to toggle
+        });
+      }}
     >
       <div
         className="rounded-lg shadow-lg transition-all duration-300"
