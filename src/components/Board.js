@@ -133,6 +133,7 @@ const Board = ({ ideas, selectedIdeas, onIdeasChange, onSelectedIdeasChange }) =
           overflow: 'hidden'
         }}
         onClick={handleCanvasClick}
+        onDoubleClick={handleCanvasDoubleClick}
       >
         {/* Canvas for connections */}
         <canvas
