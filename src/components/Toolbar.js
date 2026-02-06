@@ -19,31 +19,27 @@ const Toolbar = ({ ideas, selectedIdeas, onIdeasChange, onSelectedIdeasChange })
     }
 
     try {
-      console.log('Starting generation for topic:', inputValue);
-      const mainHeadings = await generateIdeas(inputValue);
+      const generatedIdeas = await generateIdeas(inputValue);
 
-      if (!mainHeadings || mainHeadings.length === 0) {
-        console.log('No headings returned');
-        alert('No ideas generated. Check console (F12) for errors.');
+      if (!generatedIdeas || generatedIdeas.length === 0) {
+        alert('No ideas generated.');
         return;
       }
 
-      console.log('Success! Generated headings:', mainHeadings);
-
-      // Layout logic: Spread ideas more evenly
+      // Layout logic: Spread ideas in a grid
       const columns = 3;
       const xSpacing = 300;
-      const ySpacing = 200;
+      const ySpacing = 150;
       const startX = 100;
       const startY = 100;
 
-      const newIdeas = mainHeadings.map((heading, index) => ({
+      const newIdeas = generatedIdeas.map((ideaItem, index) => ({
         id: Date.now() + index,
-        text: heading.title || 'Idea ' + (index + 1),
+        text: ideaItem.title || ideaItem.text || 'Idea',
+        description: ideaItem.description, // Store description if needed
         x: startX + (index % columns) * xSpacing,
         y: startY + Math.floor(index / columns) * ySpacing,
         connections: [],
-        subIdeas: Array.isArray(heading.subIdeas) ? heading.subIdeas : [],
       }));
 
       onIdeasChange([...ideas, ...newIdeas]);
@@ -53,6 +49,31 @@ const Toolbar = ({ ideas, selectedIdeas, onIdeasChange, onSelectedIdeasChange })
       console.error('Generation failed:', err);
       alert('Error: ' + err.message);
     }
+  };
+
+  const handleConnect = () => {
+    if (selectedIdeas.length < 2) {
+      alert('Please select at least 2 ideas to connect them!');
+      return;
+    }
+
+    // Connect every selected idea to every other selected idea
+    const newIdeas = ideas.map(idea => {
+      if (selectedIdeas.includes(idea.id)) {
+        // Add all other selected IDs to this idea's connections, avoiding duplicates
+        const newConnections = [...idea.connections];
+        selectedIdeas.forEach(id => {
+          if (id !== idea.id && !newConnections.includes(id)) {
+            newConnections.push(id);
+          }
+        });
+        return { ...idea, connections: newConnections };
+      }
+      return idea;
+    });
+
+    onIdeasChange(newIdeas);
+    onSelectedIdeasChange([]); // Deselect after connecting
   };
 
   const handleClearBoard = () => {
@@ -144,6 +165,18 @@ const Toolbar = ({ ideas, selectedIdeas, onIdeasChange, onSelectedIdeasChange })
             }}
           >
             ✨ Refine {selectedIdeas.length > 0 ? '(Selected)' : '(All)'}
+          </button>
+
+          <button
+            onClick={handleConnect}
+            disabled={selectedIdeas.length < 2}
+            className="px-4 py-2 text-white rounded-lg hover:opacity-90 focus:ring-2 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: isDark ? '#2563eb' : '#3b82f6',
+              fontSize: isDark ? '15px' : '14px'
+            }}
+          >
+            🔗 Connect
           </button>
 
           <button

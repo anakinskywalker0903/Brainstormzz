@@ -49,19 +49,19 @@ export function useAI() {
       const messages = [
         {
           role: "system",
-          content: `You are a world-class creative strategist. Output valid JSON only. 
-          Return a format: { "mainHeadings": [ { "title": "Creative Angle", "subIdeas": ["sub-point 1", "sub-point 2"] } ] }`
+          content: `You are a creative strategist. Output valid JSON only. 
+          Return a format: { "ideas": [ { "title": "Idea Title", "description": "Short explanation" } ] }`
         },
         {
           role: "user",
           content: `Topic: ${topic}. 
-          Generate exactly 6 distinct, high-impact, and non-obvious creative angles or categories. 
-          Avoid generic advice. Be specific, bold, and actionable.`
+          Generate exactly 6 distinct, high-impact creative ideas. 
+          Return them as a flat list.`
         }
       ];
 
       const data = await callOpenAI(messages, true);
-      return data.mainHeadings || [];
+      return data.ideas || [];
     } catch (error) {
       console.error("Generate Error:", error);
       return [];
