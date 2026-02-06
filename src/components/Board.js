@@ -70,39 +70,8 @@ const Board = ({ ideas, selectedIdeas, onIdeasChange, onSelectedIdeasChange }) =
     ctx.stroke();
   };
 
-  // Handle double click to create new idea
-  const handleCanvasDoubleClick = (e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    // Check if double click is on an existing idea (ignore if so)
-    const clickedIdea = ideas.find(idea =>
-      x >= idea.x && x <= idea.x + 180 &&
-      y >= idea.y && y <= idea.y + 50
-    );
-
-    if (!clickedIdea) {
-      // Add new idea with dynamic boundary constraints
-      const boardWidth = canvasRef.current ? canvasRef.current.offsetWidth : 1000;
-      const boardHeight = canvasRef.current ? canvasRef.current.offsetHeight : 800;
-      const ideaWidth = 180;
-      const ideaHeight = 50;
-
-      const constrainedX = Math.max(0, Math.min(x - ideaWidth / 2, boardWidth - ideaWidth));
-      const constrainedY = Math.max(0, Math.min(y - ideaHeight / 2, boardHeight - ideaHeight));
-
-      const newIdea = {
-        id: Date.now(),
-        text: '', // Empty text so placeholder or typing shows clearly
-        x: constrainedX,
-        y: constrainedY,
-        connections: [],
-        autoEdit: true, // Trigger write mode immediately
-      };
-      onIdeasChange([...ideas, newIdea]);
-    }
-  };
+  // Handle double click - removed to prevent conflict with single click creation
+  // logic moved to single click handleCanvasClick
 
   // Handle single click for selection/deselection
   const handleCanvasClick = (e) => {
@@ -123,8 +92,27 @@ const Board = ({ ideas, selectedIdeas, onIdeasChange, onSelectedIdeasChange }) =
         : [...selectedIdeas, clickedIdea.id];
       onSelectedIdeasChange(newSelected);
     } else {
-      // Deselect all if clicking background
+      // Add new idea on single click (Background)
+      const boardWidth = Math.max(canvasRef.current ? canvasRef.current.offsetWidth : 1000, 3000);
+      const boardHeight = Math.max(canvasRef.current ? canvasRef.current.offsetHeight : 800, 3000);
+      const ideaWidth = 180;
+      const ideaHeight = 50;
+
+      const constrainedX = Math.max(0, Math.min(x - ideaWidth / 2, boardWidth - ideaWidth));
+      const constrainedY = Math.max(0, Math.min(y - ideaHeight / 2, boardHeight - ideaHeight));
+
+      const newIdea = {
+        id: Date.now(),
+        text: '',
+        x: constrainedX,
+        y: constrainedY,
+        connections: [],
+        autoEdit: true,
+      };
+
+      // Clear selection when creating new idea
       onSelectedIdeasChange([]);
+      onIdeasChange([...ideas, newIdea]);
     }
   };
 
@@ -145,7 +133,6 @@ const Board = ({ ideas, selectedIdeas, onIdeasChange, onSelectedIdeasChange }) =
           overflow: 'hidden'
         }}
         onClick={handleCanvasClick}
-        onDoubleClick={handleCanvasDoubleClick}
       >
         {/* Canvas for connections */}
         <canvas

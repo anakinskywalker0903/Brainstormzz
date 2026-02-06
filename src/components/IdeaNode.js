@@ -111,7 +111,7 @@ const IdeaNode = ({ idea, isSelected, onUpdate, onDelete }) => {
           />
         ) : (
           <div
-            onClick={() => setIsEditing(true)}
+            onDoubleClick={() => setIsEditing(true)}
             style={{
               color: textColor,
               fontFamily: 'Rajdhani, sans-serif',
