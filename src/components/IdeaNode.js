@@ -84,11 +84,7 @@ const IdeaNode = ({ idea, isSelected, onUpdate, onDelete, onToggleSelect }) => {
       onMouseLeave={handleMouseUp}
       onClick={(e) => {
         e.stopPropagation();
-        // Toggle selection
-        onUpdate({
-          ...idea,
-          _toggleSelection: true // Signal parent to toggle
-        });
+        onToggleSelect && onToggleSelect();
       }}
     >
       <div
@@ -135,6 +131,7 @@ const IdeaNode = ({ idea, isSelected, onUpdate, onDelete, onToggleSelect }) => {
               textShadow: textShadow,
               cursor: 'text',
               wordWrap: 'break-word',
+              userSelect: 'none', // Prevent text selection while dragging
             }}
           >
             {text}
@@ -142,7 +139,10 @@ const IdeaNode = ({ idea, isSelected, onUpdate, onDelete, onToggleSelect }) => {
         )}
 
         <button
-          onClick={onDelete}
+          onClick={(e) => {
+            e.stopPropagation(); // CRITICAL: Stop delete from selecting/editing
+            onDelete();
+          }}
           style={{
             position: 'absolute',
             top: '4px',
