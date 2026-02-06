@@ -22,7 +22,7 @@ export function useAI() {
         body: JSON.stringify({
           model: "gpt-3.5-turbo-1106", // Supports response_format type: json_object
           messages: messages,
-          temperature: 0.7,
+          temperature: 0.9,
           response_format: jsonMode ? { type: "json_object" } : undefined
         }),
       });
@@ -49,12 +49,14 @@ export function useAI() {
       const messages = [
         {
           role: "system",
-          content: `You are a creative brainstorming assistant. Output valid JSON only. 
-          Return a format: { "mainHeadings": [ { "title": "...", "subIdeas": ["..."] } ] }`
+          content: `You are a world-class creative strategist. Output valid JSON only. 
+          Return a format: { "mainHeadings": [ { "title": "Creative Angle", "subIdeas": ["sub-point 1", "sub-point 2"] } ] }`
         },
         {
           role: "user",
-          content: `Topic: ${topic}. Generate 3-5 main creative angles/categories with sub-ideas.`
+          content: `Topic: ${topic}. 
+          Generate exactly 6 distinct, high-impact, and non-obvious creative angles or categories. 
+          Avoid generic advice. Be specific, bold, and actionable.`
         }
       ];
 
