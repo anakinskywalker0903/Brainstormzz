@@ -30,20 +30,21 @@ const IdeaNode = ({ idea, isSelected, onUpdate, onDelete }) => {
 
   const handleMouseMove = (e) => {
     if (!isDragging) return;
-    
-    const boardWidth = 500;
-    const boardHeight = 500;
+
+    // Use window dimensions as fallback, or large values to allow free movement
+    // ideally this should come from props, but for now we unblock the 500px limit
+    const boardWidth = window.innerWidth;
+    const boardHeight = window.innerHeight;
     const ideaWidth = 180;
     const ideaHeight = 50;
-    const margin = 0; // ZERO tolerance - ideas must be completely inside
-    
+
     const newX = e.clientX - dragStart.x;
     const newY = e.clientY - dragStart.y;
-    
-    // ZERO tolerance constraint within board boundaries
-    const constrainedX = Math.max(0, Math.min(newX, boardWidth - ideaWidth));
-    const constrainedY = Math.max(0, Math.min(newY, boardHeight - ideaHeight));
-    
+
+    // Constrain position largely but allow more freedom
+    const constrainedX = Math.max(0, newX);
+    const constrainedY = Math.max(0, newY);
+
     onUpdate({ ...idea, x: constrainedX, y: constrainedY });
   };
 
@@ -80,7 +81,7 @@ const IdeaNode = ({ idea, isSelected, onUpdate, onDelete }) => {
           width: '180px',
           padding: '12px',
           background: bgGradient,
-          border: isSelected 
+          border: isSelected
             ? `2px solid ${accentColor}`
             : `1px solid ${isDark ? 'rgba(255, 0, 0, 0.4)' : 'rgba(255, 200, 0, 0.4)'}`,
           boxShadow: isSelected
@@ -123,7 +124,7 @@ const IdeaNode = ({ idea, isSelected, onUpdate, onDelete }) => {
             {text}
           </div>
         )}
-        
+
         <button
           onClick={onDelete}
           style={{

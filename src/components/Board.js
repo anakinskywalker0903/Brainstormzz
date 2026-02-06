@@ -70,6 +70,40 @@ const Board = ({ ideas, selectedIdeas, onIdeasChange, onSelectedIdeasChange }) =
     ctx.stroke();
   };
 
+  // Handle double click to create new idea
+  const handleCanvasDoubleClick = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Check if double click is on an existing idea (ignore if so)
+    const clickedIdea = ideas.find(idea =>
+      x >= idea.x && x <= idea.x + 180 &&
+      y >= idea.y && y <= idea.y + 50
+    );
+
+    if (!clickedIdea) {
+      // Add new idea with dynamic boundary constraints
+      const boardWidth = canvasRef.current ? canvasRef.current.offsetWidth : 1000;
+      const boardHeight = canvasRef.current ? canvasRef.current.offsetHeight : 800;
+      const ideaWidth = 180;
+      const ideaHeight = 50;
+
+      const constrainedX = Math.max(0, Math.min(x - ideaWidth / 2, boardWidth - ideaWidth));
+      const constrainedY = Math.max(0, Math.min(y - ideaHeight / 2, boardHeight - ideaHeight));
+
+      const newIdea = {
+        id: Date.now(),
+        text: 'New idea',
+        x: constrainedX,
+        y: constrainedY,
+        connections: []
+      };
+      onIdeasChange([...ideas, newIdea]);
+    }
+  };
+
+  // Handle single click for selection/deselection
   const handleCanvasClick = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -88,24 +122,8 @@ const Board = ({ ideas, selectedIdeas, onIdeasChange, onSelectedIdeasChange }) =
         : [...selectedIdeas, clickedIdea.id];
       onSelectedIdeasChange(newSelected);
     } else {
-      // Add new idea with dynamic boundary constraints
-      const boardWidth = canvasRef.current ? canvasRef.current.offsetWidth : 1000;
-      const boardHeight = canvasRef.current ? canvasRef.current.offsetHeight : 800;
-      const ideaWidth = 180; // Idea node width
-      const ideaHeight = 50; // Idea node height
-
-      // Constrain position within board boundaries
-      const constrainedX = Math.max(0, Math.min(x - ideaWidth / 2, boardWidth - ideaWidth));
-      const constrainedY = Math.max(0, Math.min(y - ideaHeight / 2, boardHeight - ideaHeight));
-
-      const newIdea = {
-        id: Date.now(),
-        text: 'New idea',
-        x: constrainedX,
-        y: constrainedY,
-        connections: []
-      };
-      onIdeasChange([...ideas, newIdea]);
+      // Deselect all if clicking background
+      onSelectedIdeasChange([]);
     }
   };
 
@@ -126,6 +144,7 @@ const Board = ({ ideas, selectedIdeas, onIdeasChange, onSelectedIdeasChange }) =
           overflow: 'hidden'
         }}
         onClick={handleCanvasClick}
+        onDoubleClick={handleCanvasDoubleClick}
       >
         {/* Canvas for connections */}
         <canvas
