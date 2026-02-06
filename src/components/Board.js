@@ -145,6 +145,7 @@ const Board = ({ ideas, selectedIdeas, onIdeasChange, onSelectedIdeasChange }) =
         }}
         onClick={handleCanvasClick}
         onDoubleClick={handleCanvasDoubleClick}
+        onDoubleClick={handleCanvasDoubleClick}
       >
         {/* Canvas for connections */}
         <canvas
