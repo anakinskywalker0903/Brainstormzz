@@ -2,7 +2,6 @@
   "name": "Brainstormzz",
   "version": "1.0.0",
   "description": "AI-powered brainstorming whiteboard powered by Chrome's built-in AI",
-  "homepage": "https://yourusername.github.io/Brainstormzz",
   "main": "src/index.js",
   "scripts": {
     "start": "react-scripts start",
