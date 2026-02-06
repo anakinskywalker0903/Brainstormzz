@@ -1,181 +1,123 @@
 // src/hooks/useAI.js
 import { useCallback, useState } from "react";
 
-const API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
+// Use OPENAI_API_KEY as requested
+const API_KEY = process.env.REACT_APP_GEMINI_API_KEY || process.env.REACT_APP_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+// Note: User said they pasted OpenAI key into REACT_APP_GEMINI_API_KEY, but we should try to grab whichever is available.
+// Ideally, we should just use the key they have.
 
-
-const ENDPOINT =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+const ENDPOINT = "https://api.openai.com/v1/chat/completions";
 
 export function useAI() {
   const [loading, setLoading] = useState(false);
 
-  const generateIdeas = useCallback(async (topic) => {
-    if (!topic) return [];
-    setLoading(true);
+  const callOpenAI = async (messages, jsonMode = true) => {
     try {
-      const response = await fetch(`${ENDPOINT}?key=${API_KEY}`, {
+      const response = await fetch(ENDPOINT, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${API_KEY}`
+        },
         body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [
-                {
-                  text: `
-You are a backend JSON API.
-
-RULES:
-- Output ONLY valid JSON
-- No explanations
-- No markdown
-- No backticks
-
-Return EXACTLY this structure:
-
-{
-  "mainHeadings": [
-    {
-      "title": "Heading name",
-      "subIdeas": ["idea 1", "idea 2", "idea 3"]
-    }
-  ]
-}
-
-Topic: "${topic}"
-`,
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.5,
-            maxOutputTokens: 700,
-            responseMimeType: "application/json",
-          },
+          model: "gpt-3.5-turbo-1106", // Supports response_format type: json_object
+          messages: messages,
+          temperature: 0.7,
+          response_format: jsonMode ? { type: "json_object" } : undefined
         }),
       });
 
       if (!response.ok) {
         const err = await response.text();
-        console.error("Gemini API error:", err);
-        return [];
+        console.error("OpenAI API error:", err);
+        throw new Error(`API Error: ${response.statusText}`);
       }
 
       const data = await response.json();
-      console.log("GEMINI RAW RESPONSE:", data);
-
-      const part = data?.candidates?.[0]?.content?.parts?.[0];
-      if (!part) return [];
-
-      // Case 1: JSON object
-      if (part.json?.mainHeadings) {
-        return part.json.mainHeadings;
-      }
-
-      // Case 2: JSON as string
-      if (part.text) {
-        const parsed = JSON.parse(part.text);
-        return parsed.mainHeadings || [];
-      }
-
-      return [];
+      const content = data.choices[0].message.content;
+      return jsonMode ? JSON.parse(content) : content;
     } catch (error) {
-      console.error("AI ERROR:", error);
+      console.error("AI Request Failed:", error);
+      throw error;
+    }
+  };
+
+  const generateIdeas = useCallback(async (topic) => {
+    if (!topic) return [];
+    setLoading(true);
+    try {
+      const messages = [
+        {
+          role: "system",
+          content: `You are a creative brainstorming assistant. Output valid JSON only. 
+          Return a format: { "mainHeadings": [ { "title": "...", "subIdeas": ["..."] } ] }`
+        },
+        {
+          role: "user",
+          content: `Topic: ${topic}. Generate 3-5 main creative angles/categories with sub-ideas.`
+        }
+      ];
+
+      const data = await callOpenAI(messages, true);
+      return data.mainHeadings || [];
+    } catch (error) {
+      console.error("Generate Error:", error);
       return [];
     } finally {
       setLoading(false);
     }
   }, []);
 
-  /* Existing generateIdeas code above... preserving it via the 'TargetContent' context matching logic usually, but here I'm adding new functions before the return */
-
   const summarizeIdeas = useCallback(async (ideas) => {
     if (!ideas || ideas.length === 0) return '';
-
+    setLoading(true); // summarize usually fast but good to show loading
     try {
       const ideasText = ideas.map(i => `- ${i.text}`).join('\n');
+      const messages = [
+        {
+          role: "system",
+          content: "You are a helpful assistant. Summarize the following ideas into a concise paragraph."
+        },
+        {
+          role: "user",
+          content: ideasText
+        }
+      ];
 
-      const response = await fetch(`${ENDPOINT}?key=${API_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            role: 'user',
-            parts: [{
-              text: `
-                Summarize these brainstorming ideas into a concise, cohesive paragraph.
-                
-                Ideas:
-                ${ideasText}
-              `
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 500,
-          },
-        }),
-      });
-
-      const data = await response.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      return text || 'Could not generate summary.';
+      // Note: No JSON mode for summary, just text
+      const text = await callOpenAI(messages, false);
+      return text;
     } catch (error) {
       console.error('Summarize Error:', error);
-      throw error;
+      return "Failed to summarize.";
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   const refineIdeas = useCallback(async (ideasToRefine) => {
     if (!ideasToRefine || ideasToRefine.length === 0) return [];
-
+    setLoading(true);
     try {
-      const response = await fetch(`${ENDPOINT}?key=${API_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            role: 'user',
-            parts: [{
-              text: `
-                You are a backend JSON API.
-                Refine these ideas to be more impactful, professional, and clear.
-                Keep the same IDs.
-                
-                Input: ${JSON.stringify(ideasToRefine.map(i => ({ id: i.id, text: i.text })))}
-                
-                Return JSON structure:
-                {
-                  "refined": [
-                    { "id": 123, "text": "Refined text here" }
-                  ]
-                }
-              `
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            responseMimeType: "application/json",
-          },
-        }),
-      });
+      const messages = [
+        {
+          role: "system",
+          content: `You are a professional editor. Refine the text of these ideas to be more impactful.
+          Keep the same IDs. Output JSON: { "refined": [{ "id": 123, "text": "..." }] }`
+        },
+        {
+          role: "user",
+          content: JSON.stringify(ideasToRefine.map(i => ({ id: i.id, text: i.text })))
+        }
+      ];
 
-      const data = await response.json();
-      const part = data?.candidates?.[0]?.content?.parts?.[0];
-
-      let result = [];
-      if (part.json?.refined) {
-        result = part.json.refined;
-      } else if (part.text) {
-        const parsed = JSON.parse(part.text);
-        result = parsed.refined || [];
-      }
-      return result;
+      const data = await callOpenAI(messages, true);
+      return data.refined || [];
     } catch (error) {
       console.error('Refine Error:', error);
-      throw error;
+      return [];
+    } finally {
+      setLoading(false);
     }
   }, []);
 
